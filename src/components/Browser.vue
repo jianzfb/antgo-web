@@ -64,7 +64,10 @@ export default{
     },
     mounted: function(){
         var _this = this;
-        _this.axios.get('/antgo/api/browser/sample/entry/').then(function(res){
+        this.$route.query.input
+        _this.axios.get('/antgo/api/browser/sample/entry/',  {params:{
+            input: this.$route.query.input,
+            }}).then(function(res){
             _this.samples = res.data.content['value'];
             _this.index = res.data.content['step'];
             _this.tags = res.data.content['tags'];
@@ -149,6 +152,7 @@ export default{
                                 // 绘制图片
                                 context.drawImage(img,0,0,img.width,img.height)
                                 
+                                // 绘制矩形框
                                 if('bboxes' in _this.samples[index]){
                                     // 绘制矩形框信息     
                                     if('labels' in _this.samples[index] && _this.samples[index]['labels'].length > 0){
@@ -172,6 +176,7 @@ export default{
                                     }
                                 }
                                 
+                                // 绘制多边形
                                 if('segments' in _this.samples[index]){
                                     // 绘制多边形信息     
                                     if('labels' in _this.samples[index] && _this.samples[index]['labels'].length > 0){
@@ -193,7 +198,28 @@ export default{
                                             _this.drawSegment(context, seg_points, seg_color, '');
                                         }                                        
                                     }
-                                }                               
+                                }
+                                
+                                // 绘制2D线或点
+                                if('joints2d' in _this.samples[index]){
+                                    // 3d 点也会转换成2d进入这里进行绘制
+                                    // skeleton,joints2d
+                                    if('skeleton' in _this.samples[index]){
+                                        // 使用skeleton绘制线
+                                        var bone_num = _this.samples[index]['skeleton'].length
+                                        var bone_colors = []
+                                        for(var bone_i in _this.samples[index]['skeleton']){
+                                            bone_i = bone_i % _this.color_map.length;
+                                            bone_colors.push(_this.color_map[bone_i])
+                                        }
+
+                                        _this.drawSkeleton(context, _this.samples[index]['joints2d'], _this.samples[index]['skeleton'], bone_colors)
+                                    }
+                                    else{
+                                        // 绘制点
+                                        _this.drawPoint(context, _this.samples[index]['joints2d'])
+                                    }
+                                }
                             }
                         }
                     }
@@ -246,8 +272,40 @@ export default{
             context.fillStyle = "rgba(255,255,255,0.5)";
             context.fill()
         },
-        drawSkeleton: function(content, points, skeleton, colors){
+        
+        drawSkeleton: function(context, points, skeleton, colors){
+            for(var bone_i=0; bone_i<skeleton.length; ++bone_i){
+                var bone_from_i = skeleton[bone_i][0];
+                var bone_to_j = skeleton[bone_i][1];
 
+                var bone_from_x = points[bone_from_i][0];
+                var bone_from_y = points[bone_from_i][1];
+                var bone_to_x = points[bone_to_j][0];
+                var bone_to_y = points[bone_to_j][1];           
+                
+                var bone_color = colors[bone_i];
+                
+                context.beginPath();
+                context.moveTo(bone_from_x, bone_from_y);
+                context.lineTo(bone_to_x, bone_to_y);
+                context.closePath();
+                context.strokeStyle = bone_color;
+                context.lineWidth = 4;
+                
+                context.stroke()
+            }
+        },
+
+        drawPoint: function(context, points){
+            for(var point_i=0; point_i<points.length; ++point_i){
+                var p_x = points[point_i][0];
+                var p_y = points[point_i][1];
+                context.beginPath();
+                context.fillStyle = 'red';
+                context.arc(p_x,p_y,4,2*Math.PI,true);
+                context.closePath();
+                context.fill();
+            }
         }
     }
 }

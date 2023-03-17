@@ -19,6 +19,14 @@
         </template>
         <b-button variant="primary" href="#">了解详情</b-button>
         <b-button variant="primary" @click="enter_page()" style="margin-left:10px">进入</b-button>
+
+        <form v-if="need_input" style="margin-top:20px">
+            <label for="range-1">输入样本解析文件:</label>
+            <div class="form-group">
+                <input class="form-control" type="text" v-model="user_input" placeholder="输入数据">
+            </div>
+        </form>
+
     </b-jumbotron>   
     <b-jumbotron v-if="project_type == 'PREDICT'">
         <template #header>ANTGO-模型预测</template>
@@ -43,7 +51,9 @@
                     stage: '',
                     waiting_time_to_next_round: '',
                 },
-                is_ready: false
+                is_ready: false,
+                need_input: false,
+                user_input: ""
             }
         },
         mounted: function(){
@@ -51,6 +61,7 @@
             _this.axios.get('/antgo/api/info/').then(function(res){
                 _this.project_type = res.data.content['project_type'];
                 if(_this.project_type == 'LABEL'){
+                    // 标注欢迎页面
                     _this.label_project_state['round'] = res.data.content['project_state']['round'];
                     _this.label_project_state['state'] = res.data.content['project_state']['state'];
                     _this.label_project_state['stage'] = res.data.content['project_state']['stage'];
@@ -62,7 +73,12 @@
                         _this.is_ready = false;
                     }                    
                 }
+                else if(_this.project_type == 'BROWSER'){
+                    // 浏览欢迎页面
+                    _this.need_input = res.data.content['project_state']['need_input'];
+                }
                 else if(_this.project_type == 'DEMO'){
+                    // DEMO欢迎页面
                     _this.enter_page();
                 }
                 else{
@@ -81,7 +97,10 @@
                 }
                 else if(this.project_type == 'BROWSER'){
                     this.$router.push({
-                        path: '/browser/'
+                        path: '/browser/',
+                        query: {
+                            input: this.user_input
+                        }                    
                     })
                 }
                 else if(this.project_type == 'PREDICT'){
