@@ -138,28 +138,26 @@ export default{
                 var _this = this;
                 for(var index in _this.samples){
                     if(_this.samples[index]['type'] == 'IMAGE'){
-                        var canvas = document.getElementById('canvas_'+index);
-                        var context = canvas.getContext('2d')
+                        var show_image = new Image()
+                        show_image.src = this.samples[index]['data']                        
+                        show_image.onload = (function(_index, img){
 
-                        var img = new Image()
-                        img.src = this.samples[index]['data']
-                        // img.src = 'https://img2.baidu.com/it/u=3202947311,1179654885&fm=253&fmt=auto&app=138&f=JPEG?w=800&h=500'
-                        img.onload = function(){
-                            if(img.complete){
-                                // 根据图像重新设定了canvas的长宽
+                            return function(){
+                                var canvas = document.getElementById('canvas_'+_index);
+                                var context = canvas.getContext('2d')
                                 canvas.setAttribute("width", img.width)
                                 canvas.setAttribute("height", img.height)
                                 // 绘制图片
                                 context.drawImage(img,0,0,img.width,img.height)
                                 
                                 // 绘制矩形框
-                                if('bboxes' in _this.samples[index]){
+                                if('bboxes' in _this.samples[_index]){
                                     // 绘制矩形框信息     
-                                    if('labels' in _this.samples[index] && _this.samples[index]['labels'].length > 0){
+                                    if('labels' in _this.samples[_index] && _this.samples[_index]['labels'].length > 0){
                                         // 根据类别 设置不同颜色
-                                        for(var box_t_i in _this.samples[index]['bboxes']){
-                                            var box_t_xyxy = _this.samples[index]['bboxes'][box_t_i];
-                                            var box_label = _this.samples[index]['labels'][box_t_i];
+                                        for(var box_t_i in _this.samples[_index]['bboxes']){
+                                            var box_t_xyxy = _this.samples[_index]['bboxes'][box_t_i];
+                                            var box_label = _this.samples[_index]['labels'][box_t_i];
                                             box_label = parseInt(box_label);
                                             var t_color = _this.color_map[box_label];
 
@@ -168,8 +166,8 @@ export default{
                                     }
                                     else{
                                         // 使用统一颜色
-                                        for(var box_i in _this.samples[index]['bboxes']){
-                                            var box_xyxy = _this.samples[index]['bboxes'][box_i];
+                                        for(var box_i in _this.samples[_index]['bboxes']){
+                                            var box_xyxy = _this.samples[_index]['bboxes'][box_i];
                                             var color = _this.color_map[0];
                                             _this.drawRect(context, box_xyxy[0],box_xyxy[1],box_xyxy[2]-box_xyxy[0],box_xyxy[3]-box_xyxy[1],color)
                                         }                                        
@@ -177,13 +175,13 @@ export default{
                                 }
                                 
                                 // 绘制多边形
-                                if('segments' in _this.samples[index]){
+                                if('segments' in _this.samples[_index]){
                                     // 绘制多边形信息     
-                                    if('labels' in _this.samples[index] && _this.samples[index]['labels'].length > 0){
+                                    if('labels' in _this.samples[_index] && _this.samples[_index]['labels'].length > 0){
                                         // 根据类别 设置不同颜色
-                                        for(var seg_t_i in _this.samples[index]['segments']){
-                                            var seg_t_points = _this.samples[index]['segments'][seg_t_i];
-                                            var seg_t_label = _this.samples[index]['labels'][seg_t_i];
+                                        for(var seg_t_i in _this.samples[_index]['segments']){
+                                            var seg_t_points = _this.samples[_index]['segments'][seg_t_i];
+                                            var seg_t_label = _this.samples[_index]['labels'][seg_t_i];
                                             seg_t_label = parseInt(seg_t_label);
                                             var seg_t_color = _this.color_map[seg_t_label];
 
@@ -192,8 +190,8 @@ export default{
                                     }
                                     else{
                                         // 使用统一颜色
-                                        for(var seg_i in _this.samples[index]['segments']){
-                                            var seg_points = _this.samples[index]['segments'][seg_i];
+                                        for(var seg_i in _this.samples[_index]['segments']){
+                                            var seg_points = _this.samples[_index]['segments'][seg_i];
                                             var seg_color = _this.color_map[0];
                                             _this.drawSegment(context, seg_points, seg_color, '');
                                         }                                        
@@ -201,27 +199,27 @@ export default{
                                 }
                                 
                                 // 绘制2D线或点
-                                if('joints2d' in _this.samples[index]){
+                                if('joints2d' in _this.samples[_index]){
                                     // 3d 点也会转换成2d进入这里进行绘制
                                     // skeleton,joints2d
-                                    if('skeleton' in _this.samples[index]){
+                                    if('skeleton' in _this.samples[_index]){
                                         // 使用skeleton绘制线
-                                        var bone_num = _this.samples[index]['skeleton'].length
+                                        var bone_num = _this.samples[_index]['skeleton'].length
                                         var bone_colors = []
-                                        for(var bone_i in _this.samples[index]['skeleton']){
+                                        for(var bone_i in _this.samples[_index]['skeleton']){
                                             bone_i = bone_i % _this.color_map.length;
                                             bone_colors.push(_this.color_map[bone_i])
                                         }
 
-                                        _this.drawSkeleton(context, _this.samples[index]['joints2d'], _this.samples[index]['skeleton'], bone_colors)
+                                        _this.drawSkeleton(context, _this.samples[_index]['joints2d'], _this.samples[_index]['skeleton'], bone_colors)
                                     }
                                     else{
                                         // 绘制点
-                                        _this.drawPoint(context, _this.samples[index]['joints2d'])
+                                        _this.drawPoint(context, _this.samples[_index]['joints2d'])
                                     }
                                 }
                             }
-                        }
+                        })(index, show_image);
                     }
                 }
             })
@@ -272,18 +270,18 @@ export default{
             context.fillStyle = "rgba(255,255,255,0.5)";
             context.fill()
         },
-        
         drawSkeleton: function(context, points, skeleton, colors){
-            for(var bone_i=0; bone_i<skeleton.length; ++bone_i){
+            for(var obj_i=0; obj_i<points.length; ++obj_i){
+                for(var bone_i=0; bone_i<skeleton.length; ++bone_i){
                 var bone_from_i = skeleton[bone_i][0];
                 var bone_to_j = skeleton[bone_i][1];
 
-                var bone_from_x = points[bone_from_i][0];
-                var bone_from_y = points[bone_from_i][1];
-                var bone_to_x = points[bone_to_j][0];
-                var bone_to_y = points[bone_to_j][1];           
+                var bone_from_x = points[obj_i][bone_from_i][0];
+                var bone_from_y = points[obj_i][bone_from_i][1];
+                var bone_to_x = points[obj_i][bone_to_j][0];
+                var bone_to_y = points[obj_i][bone_to_j][1];           
                 
-                var bone_color = colors[bone_i];
+                var bone_color = colors[bone_i%colors.length];
                 
                 context.beginPath();
                 context.moveTo(bone_from_x, bone_from_y);
@@ -294,17 +292,19 @@ export default{
                 
                 context.stroke()
             }
+            }
         },
-
         drawPoint: function(context, points){
-            for(var point_i=0; point_i<points.length; ++point_i){
-                var p_x = points[point_i][0];
-                var p_y = points[point_i][1];
-                context.beginPath();
-                context.fillStyle = 'red';
-                context.arc(p_x,p_y,4,2*Math.PI,true);
-                context.closePath();
-                context.fill();
+            for(var obj_i=0; obj_i<points.length; ++obj_i){
+                for(var point_i=0; point_i<points[obj_i].length; ++point_i){
+                    var p_x = points[obj_i][point_i][0];
+                    var p_y = points[obj_i][point_i][1];
+                    context.beginPath();
+                    context.fillStyle = 'red';
+                    context.arc(p_x,p_y,4,2*Math.PI,true);
+                    context.closePath();
+                    context.fill();
+                }
             }
         }
     }
