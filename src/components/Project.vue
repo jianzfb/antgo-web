@@ -112,6 +112,12 @@
         </div>
     </b-container>
         <input type="file" ref="file_control" @change="selectedFile" style="display: none">
+        <div>
+            <b-modal id="finish_message" title="提示信息" @ok="force_finish_label" ok-title="确认" cancel-title="取消">
+                <p class="my-4">未完成所有样本标注, 是否强制结束？</p>
+            </b-modal>
+        </div>
+
     </div>
 </template>
 
@@ -252,7 +258,9 @@
                 '/antgo/api/info/', params).then(function(res){
                 // 成功更新
                 if(!res.data.content['finish']){
-                    alert('没有完成所有样本标注')
+                    // 提示是否强制完成
+
+                    _this.$bvModal.show('finish_message')
                 }
                 else{
                     _this.$router.push({path: '/'})
@@ -261,7 +269,23 @@
                 // do nothing
                 console.log(error)
             })    
-        }     
+        },
+        force_finish_label: function(){
+            var _this = this;
+            let params = new FormData();  
+            params.append('running_state', 'running')
+            params.append('running_stage', 'finish')
+            params.append('force', true)
+
+            _this.axios.post(
+                '/antgo/api/info/', params).then(function(res){
+                // 由于是强制更新，无论是否完成所有标注都强制完成
+                _this.$router.push({path: '/'})
+            }).catch(function(error){
+                // do nothing
+                console.log(error)
+            })   
+        }
     }
     };
 </script>

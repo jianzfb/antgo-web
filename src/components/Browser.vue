@@ -227,7 +227,7 @@ export default{
         drawRect: function(context, x, y, lineW, lineY, color) {
             context.beginPath();
             context.strokeStyle = color;
-            context.lineWidth = 4;
+            context.lineWidth = 2;
             context.strokeRect(x, y, lineW, lineY);
 
             context.fillStyle = "rgba(255,255,255,0.5)";
@@ -288,7 +288,7 @@ export default{
                 context.lineTo(bone_to_x, bone_to_y);
                 context.closePath();
                 context.strokeStyle = bone_color;
-                context.lineWidth = 4;
+                context.lineWidth = 1;
                 
                 context.stroke()
             }
