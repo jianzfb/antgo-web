@@ -43,7 +43,7 @@ export default new Router({
         component: Predict
       },
       {
-        path: '/demo',
+        path: '/demo/:name?',
         name: 'Demo',
         component: Demo
       }
