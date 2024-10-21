@@ -2,6 +2,8 @@
     <b-container style="margin-top: 30px; max-width: 80%;">
 	<b-row>
 		<b-jumbotron :header="title" :lead="description" style="width: 100%;">
+            <b-button variant="primary" style="width:100px" v-if="pre_step != ''" @click="pre_step_click()">上一步</b-button>
+            <b-button variant="primary" style="width:100px; margin-left: 20px;" v-if="next_step != ''" @click="next_step_click()">下一步</b-button>
 		</b-jumbotron>		
 	</b-row>
 
@@ -31,7 +33,7 @@
                     </b-col>
                     <b-col v-if="input['type'] == 'video'" style="margin-top: 20px">
                         <h5>{{input['name']}}</h5>
-                        <video :src="input['path']" controls></video>
+                        <video :src="input['path']" controls style="width: 512px"></video>
                         <b-form-file
                             v-model="input['value']"
                             :state="Boolean(input['status'] == 'finish')"
@@ -61,6 +63,45 @@
                         <h5>{{input['name']}}</h5>
                         <b-form-select v-model="input['value']" :options="input['options']"></b-form-select>
                     </b-col>
+                    <b-col v-if="input['type'] == 'image-search'" style="margin-top: 20px;">
+                        <b-form-group label="搜索引擎" v-slot="{ ariaDescribedby }">
+                        <b-form-radio-group
+                            id="radio-group-2"
+                            v-model="search_engine"
+                            :aria-describedby="ariaDescribedby"
+                            name="radio-sub-component"
+                        >
+                            <b-form-radio value="baidu">百度</b-form-radio>
+                            <b-form-radio value="bing">BING</b-form-radio>
+                            <b-form-radio value="vcg">VCG</b-form-radio>
+                        </b-form-radio-group>
+                        </b-form-group>
+                        <b-input-group prepend="搜索词" class="mt-3">
+                            <b-form-input v-model="search_word"></b-form-input>
+                            <b-input-group-append>
+                            <b-button variant="info" @click="search_func()">搜索</b-button>
+                            </b-input-group-append>
+                        </b-input-group>
+                        <b-container>
+                            <b-row>
+                                <div class="col-lg-4 inner" v-for="(image_info, image_index) in search_image_list[search_page_i]" :key="image_index">
+                                    <img  :src="image_info['image']" class="img-thumbnail" alt="..." >
+
+                                    <b-form-checkbox
+                                        v-model="search_image_map[image_info['image']]">
+                                    选中
+                                    </b-form-checkbox>
+                                </div>
+
+                            </b-row>
+                        </b-container>
+                        <nav style="margin-top:30px">
+                            <ul class="pagination">
+                                <li v-for="(page_info, page_index) in search_image_list" class="page-item" :key="page_index"><a class="page-link" style="cursor: pointer" @click="page_change(page_index)">{{page_index}}</a></li>
+                            </ul>
+                        </nav>
+                        <hr class="my-4">               
+                </b-col>
                 </b-row>
             </b-container>
             </b-card>
@@ -89,22 +130,27 @@
 		
 						</b-col>
                         <b-col v-if="output['type'] == 'video'">
-                            <h3><b-badge>{{output['name']}}</b-badge></h3>
-                            <video :src="output['value']" controls></video>                            
+                            <h4><b-badge style="font-weight: 300;">{{output['name']}}</b-badge></h4>
+                            <video :src="output['value']" controls style="width: 512px;"></video>                            
                         </b-col>
 
 						<b-col v-if="output['type'] == 'text'">
+                            <h4><b-badge style="font-weight: 300;">{{output['name']}}</b-badge></h4>
 							<b-input-group :prepend="output['name']" class="mt-3">
 								<b-form-input v-model="output['value']" disabled></b-form-input>
-							</b-input-group>      
+							</b-input-group>
 						</b-col>
 						<b-col v-if="output['type'] == 'number'">
 							<b-input-group :prepend="output['name']" class="mt-3">
 								<b-form-input type="number" v-model="output['value']" disabled></b-form-input>
-							</b-input-group>                          
+							</b-input-group>
 						</b-col>
+                        <b-col v-if="output['type'] == 'file'">
+                            <h4><b-badge style="font-weight: 300;">{{output['name']}}</b-badge></h4>
+                            <b-button variant="info" @click="downloadfile(output['value'])">下载</b-button>
+                        </b-col>
 					</b-row>
-				</b-container>		
+				</b-container>
 				</div>
 
 			</b-card>
@@ -184,7 +230,15 @@ export default{
 			image_meta_info:{},
 			iswaiting: false,
 			iserror: false,
-			error_message: ''
+			error_message: '',
+            pre_step: '',
+            next_step: '',
+            search_engine: 'baidu',
+            search_word: '',
+            search_image_list: [],
+            search_image_map: {},
+            search_page_i: 0,
+            search_page_num: 10
         }
     },
     mounted: function(){
@@ -204,7 +258,14 @@ export default{
                 if(Object.keys(_this.input_info[index].interactive).length > 0){
                     _this.input_info[index]['has_interactive'] = true;
                 }
+
+                if(_this.input_info[index]['type'] == 'image-search'){
+                    // 搜索控件
+                    setInterval(_this.search_process_listening_func, 30*1000);
+                }
             }
+            _this.pre_step = res.data['pre_step']
+            _this.next_step = res.data['next_step']
 			_this.title = res.data['title']
 			_this.description = res.data['description']
         }).catch(function(error){
@@ -240,6 +301,16 @@ export default{
                 }
             })
         },
+        downloadfile: function(data) {
+            if (!data) {
+                return
+            }
+            let link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = data;
+            document.body.appendChild(link);
+            link.click()
+        },        
         submit: function(){
             this.iswaiting = true;
 			this.iserror = false;
@@ -248,11 +319,22 @@ export default{
 				'element': [],
 				'demo': this.demo
 			}
-            
+
             for(var index in this.input_info){
                 if(this.input_info[index]['type'] == 'image' || this.input_info[index]['type'] == 'video'){
                     // file id
                     query_info['input'].push(this.input_info[index]['path'])
+                }
+                else if(this.input_info[index]['type'] == 'image-search'){
+                    // 选择选中的图片
+                    var selected_search_image_list = []
+                    for(let o in Object.keys(this.search_image_map)){
+                        var key = Object.keys(this.search_image_map)[o];
+                        if(this.search_image_map[key]){
+                            selected_search_image_list.push(key)
+                        }
+                    }
+                    query_info['input'].push(selected_search_image_list)
                 }
                 else{
                     query_info['input'].push(this.input_info[index]['value'])
@@ -538,6 +620,63 @@ export default{
                         break;
                 }
         },
+        pre_step_click: function(){
+            this.$router.push({path: '/demo/'+this.pre_step})
+            window.location.reload()
+        },
+        next_step_click: function(){
+            this.$router.push({path: '/demo/'+this.next_step})
+            window.location.reload()
+        },
+        search_func: function(){
+            if(this.search_word == ''){
+                return;
+            }
+            this.axios.get(
+                '/antgo/api/demo/search/',
+                {
+                    params:{
+                        'demo': this.demo,
+                        'search_engine': this.search_engine,
+                        'search_word': this.search_word
+                    }
+                }
+
+            ).then(function(res){})
+        },
+        search_process_listening_func: function(){
+            // 监听搜索结果
+            var _this = this;
+            this.axios.get(
+                '/antgo/api/demo/searchprocess/',
+                {
+                    params:{
+                        'demo': this.demo
+                    }
+                }                
+            ).then(function(res){
+                var imagelist = res.data['imagelist'];
+                var sample_num = imagelist.length;
+                _this.search_image_list = []
+                for(var index=0; index<sample_num; ++index){
+                    var page_index = Math.floor(index / 10);
+                    if(_this.search_image_list.length < (page_index+1)){
+                        _this.search_image_list.push([])
+                    }
+                    var image_file = imagelist[index];
+                    _this.search_image_list[page_index].push({
+                        'image': image_file,
+                    })
+                    if(!(Object.prototype.hasOwnProperty.call(_this.search_image_map, image_file))){
+                        _this.search_image_map[image_file] = false
+                    }
+                }
+                _this.search_page_num = _this.search_image_list.length;
+            })
+        },
+        page_change: function(page_index){
+            this.search_page_i = page_index;
+        }
     }
 }
 </script>
