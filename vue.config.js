@@ -1,6 +1,7 @@
 const { defineConfig } = require('@vue/cli-service')
 module.exports = {
   transpileDependencies: true,
+  publicPath: '/{DEMONAME}/',
   devServer:{
       proxy:{
         '/antgo':{
@@ -13,7 +14,7 @@ module.exports = {
           pathRewrite:{
             '^/antgo': '/antgo'
           }
-      }    
+      }
     }
   }
 

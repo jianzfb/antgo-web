@@ -11,6 +11,8 @@ Vue.use(Router)
 
 
 export default new Router({
+    base: "/{DEMONAME}/",
+    mode: "hash",
     routes: [
       {
         path: '/',
